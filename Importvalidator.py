@@ -45,7 +45,7 @@ def validate_csv(df):
             errors_dict[idx].append("Date fields must be numeric")
 
         # --- Time Validation ---
-        # [UPDATED] Format HH:MM:SS or H:MM:SS (allows 1 or 2 digits for hour)
+        # Format HH:MM:SS or H:MM:SS (allows 1 or 2 digits for hour)
         time_val = str(row['Time']).strip()
         # regex: start, 1 or 2 digits, colon, 2 digits, colon, 2 digits, end
         if not re.match(r'^\d{1,2}:\d{2}:\d{2}$', time_val):
@@ -164,8 +164,7 @@ if uploaded_file is not None:
 
                 if validated_df is not None:
                     if error_count == 0:
-                        st.success("✅ Success! The file follows all formatting rules.")
-                        st.balloons()
+                        st.success("✅ The file is validated and has no errors. It is ready to upload.")
                     else:
                         st.error(f"❌ Found {error_count} errors in the file.")
                         
