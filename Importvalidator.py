@@ -45,10 +45,11 @@ def validate_csv(df):
             errors_dict[idx].append("Date fields must be numeric")
 
         # --- Time Validation ---
-        # Format HH:MM:SS
+        # [UPDATED] Format HH:MM:SS or H:MM:SS (allows 1 or 2 digits for hour)
         time_val = str(row['Time']).strip()
-        if not re.match(r'^\d{2}:\d{2}:\d{2}$', time_val):
-            errors_dict[idx].append("Time must be in HH:MM:SS format")
+        # regex: start, 1 or 2 digits, colon, 2 digits, colon, 2 digits, end
+        if not re.match(r'^\d{1,2}:\d{2}:\d{2}$', time_val):
+            errors_dict[idx].append("Time must be in HH:MM:SS or H:MM:SS format")
 
         # --- Direction ---
         direction = str(row['Direction']).strip().lower()
@@ -72,7 +73,7 @@ def validate_csv(df):
         if re.search(r'[a-zA-Z]', amt_str):
             errors_dict[idx].append("Amount should never have any alphabet")
         else:
-            # If no alphabets, checks if it is positive (if it can be converted)
+            # If no alphabets, check if it is positive (if it can be converted)
             try:
                 amt = float(row['Amount'])
                 if amt <= 0:
