@@ -17,7 +17,7 @@ def validate_csv(df):
     annotated_df = df.copy()
     annotated_df['Validation Errors'] = ""
     
-    # 1. Define Expected Columns and Rules
+    # 1. Define Expected Columns
     expected_columns = [
         "Year", "Month", "Day", "Time", "Organizational Wallet", "Participating Wallet",
         "Network", "Direction", "Financial Action", "Asset Identifier", "Amount",
@@ -37,7 +37,6 @@ def validate_csv(df):
     for idx, row in df.iterrows():
         # --- Date Validation ---
         try:
-            # Check if valid date
             year, month, day = int(row['Year']), int(row['Month']), int(row['Day'])
             pd.Timestamp(year=year, month=month, day=day)
         except ValueError:
@@ -52,41 +51,44 @@ def validate_csv(df):
             errors_dict[idx].append("Time must be in HH:MM:SS format")
 
         # --- Direction ---
-        # "sender" or "receiver"
         direction = str(row['Direction']).strip().lower()
         if direction not in ['sender', 'receiver']:
             errors_dict[idx].append("Direction must be 'sender' or 'receiver'")
 
         # --- Financial Action ---
-        # "token_transfer" or "gas"
         action = str(row['Financial Action']).strip().lower()
         if action not in ['token_transfer', 'gas']:
             errors_dict[idx].append("Financial Action must be 'token_transfer' or 'gas'")
 
         # --- Asset Identifier ---
-        # ALL CAPS
-        asset = str(row['Asset Identifier']).strip()
-        if not asset.isupper():
-            errors_dict[idx].append("Asset Identifier must be ALL CAPS")
+        # [REMOVED] The ALL CAPS check has been removed as per instructions.
+        pass 
 
         # --- Amount ---
-        # Positive Number
-        try:
-            amt = float(row['Amount'])
-            if amt <= 0:
-                errors_dict[idx].append("Amount must be a positive number")
-        except ValueError:
-            errors_dict[idx].append("Amount must be numeric")
+        # [UPDATED] Check for alphabets instead of generic numeric check
+        amt_str = str(row['Amount'])
+        
+        # Check if the string contains any alphabetic character (a-z, A-Z)
+        if re.search(r'[a-zA-Z]', amt_str):
+            errors_dict[idx].append("Amount should never have any alphabet")
+        else:
+            # If no alphabets, checks if it is positive (if it can be converted)
+            try:
+                amt = float(row['Amount'])
+                if amt <= 0:
+                    errors_dict[idx].append("Amount must be a positive number")
+            except ValueError:
+                # Value is not a number but contains no alphabets (e.g. special chars like "$"), 
+                # ignoring generic "must be numeric" error as requested.
+                pass
 
         # --- Fiat Currency ---
-        # "usd", "eur", "gbp" (Optional, check only if present)
         fiat = row['Fiat Currency']
         if pd.notna(fiat) and str(fiat).strip():
             if str(fiat).strip().lower() not in ['usd', 'eur', 'gbp']:
                 errors_dict[idx].append("Fiat Currency must be 'usd', 'eur', or 'gbp'")
 
         # --- Fiat Value ---
-        # Optional, but if present must be numeric
         fiat_val = row['Fiat Value (optional)']
         if pd.notna(fiat_val) and str(fiat_val).strip():
              try:
@@ -110,14 +112,12 @@ def validate_csv(df):
                     errors_dict[idx].append(f"Function Name inconsistent for Hash {hash_val}")
 
             # Check Method ID Consistency 
-            # (Note: Example file had inconsistency here, but Instructions say it should be same. We enforce strict mode.)
             if group['Method ID'].nunique() > 1:
                 for idx in group.index:
                     errors_dict[idx].append(f"Method ID inconsistent for Hash {hash_val}")
 
             # Check Transfer ID Uniqueness within Hash
             if group['Transfer ID'].duplicated().any():
-                # Find duplicates
                 dupes = group[group.duplicated(subset=['Transfer ID'], keep=False)]
                 for idx in dupes.index:
                     errors_dict[idx].append(f"Duplicate Transfer ID for Hash {hash_val}")
@@ -140,8 +140,8 @@ st.markdown("""
 This app validates your CSV file against the TRES Import Template rules.
 **Instructions:**
 1. Upload your filled `Import Template` CSV file.
-2. The app will check for formatting errors, missing values, and inconsistencies.
-3. If errors are found, you can download the file with a new **'Validation Errors'** column detailing the issues.
+2. The app will check for formatting errors.
+3. If errors are found, you can download the file with a new **'Validation Errors'** column.
 """)
 
 uploaded_file = st.file_uploader("Upload CSV File", type=["csv"])
